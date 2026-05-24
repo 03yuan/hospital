@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum DeptStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AppointmentStatus {
+  PENDING
+  VISITED
+  NO_SHOW
+  CANCELLED
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique
+  password  String
+  name      String
+  role      Role     @default(PATIENT)
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  doctor    Doctor?
+  appointments Appointment[] @relation("PatientAppointments")
+  notifications Notification[]
+}
+
+model Doctor {
+  id           Int        @id
+  userId       Int        @unique
+  departmentId Int
+  title        String
+  description  String?    @default("")
+  photo        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  user         User        @relation(fields: [userId], references: [id])
+  department   Department  @relation(fields: [departmentId], references: [id])
+  schedules    Schedule[]
+  appointments Appointment[]
+}
+
+model Department {
+  id          Int        @id @default(autoincrement())
+  name        String
+  description String?    @default("")
+  status      DeptStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  doctors   Doctor[]
+  appointments Appointment[]
+}
+
+model Schedule {
+  id        Int      @id @default(autoincrement())
+  doctorId  Int
+  date      DateTime @db.Date
+  hour      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  doctor      Doctor        @relation(fields: [doctorId], references: [id])
+  appointments Appointment[]
+
+  @@unique([doctorId, date, hour])
+  @@index([doctorId, date])
+}
+
+model Appointment {
+  id           Int               @id @default(autoincrement())
+  patientId    Int
+  doctorId     Int
+  departmentId Int
+  scheduleId   Int
+  date         DateTime          @db.Date
+  hour         Int
+  status       AppointmentStatus @default(PENDING)
+  symptom      String?
+  diagnosis    String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  patient      User          @relation("PatientAppointments", fields: [patientId], references: [id])
+  doctor       Doctor        @relation(fields: [doctorId], references: [id])
+  department   Department    @relation(fields: [departmentId], references: [id])
+  schedule     Schedule      @relation(fields: [scheduleId], references: [id])
+  prescriptions Prescription[]
+
+  @@index([patientId, status])
+  @@index([doctorId, date])
+  @@index([doctorId, status])
+}
+
+model Prescription {
+  id            Int      @id @default(autoincrement())
+  appointmentId Int
+  medicineName  String
+  dosage        String
+  method        String
+  days          Int
+  createdAt     DateTime @default(now())
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@index([appointmentId])
+}
+
+model MedicineCategory {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  medicines Medicine[]
+}
+
+model Medicine {
+  id           Int      @id @default(autoincrement())
+  categoryId   Int
+  name         String
+  commonDosage String
+  commonMethod String
+  createdAt    DateTime @default(now())
+
+  category MedicineCategory @relation(fields: [categoryId], references: [id])
+
+  @@unique([categoryId, name])
+  @@index([categoryId])
+}
+
+model Notification {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  title      String
+  content    String
+  relatedUrl String?
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
