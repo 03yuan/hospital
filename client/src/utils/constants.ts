@@ -8,9 +8,9 @@ export const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 export const APPOINTMENT_STATUS_COLORS: Record<string, string> = {
-  PENDING: 'processing',
-  VISITED: 'success',
-  NO_SHOW: 'error',
+  PENDING: 'default',
+  VISITED: 'default',
+  NO_SHOW: 'default',
   CANCELLED: 'default',
 };
 

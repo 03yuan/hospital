@@ -76,3 +76,8 @@ export async function getAppointmentStats(start?: string, end?: string) {
   const res = await client.get('/admin/statistics/appointments', { params });
   return res.data;
 }
+
+export async function getAdminPatients() {
+  const res = await client.get('/admin/patients');
+  return res.data;
+}

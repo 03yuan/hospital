@@ -548,12 +548,150 @@
 | 224 | 更新 plan.md | `specs/plan.md` | 添加 MedicineCategory/Medicine 表、API 端点、类型、实现顺序 |
 | 225 | 更新 tasks.md | `specs/tasks.md` | 添加 Phase 11 全部任务 |
 
+## Phase 12: 检查检验模块
+
+> 医生可开具检查检验单，检验科/管理员录入结果，患者可查看报告。
+
+### 12.1 数据库 & 领域层
+
+| # | 任务 | 文件 | 说明 | spec 追踪 |
+|---|------|------|------|-----------|
+| 226 | Prisma Schema: 新增 ExaminationItem/Order/OrderItem/Report 表 | `server/prisma/schema.prisma` | 含项目、订单、明细、报告四张表 | 3.13 |
+| 227 | 运行 Prisma 迁移 | `server/prisma/migrations/` | `npx prisma migrate dev` | — |
+| 228 | [P] 创建 ExaminationItem 实体 | `server/src/domain/entities/ExaminationItem.ts` | id, name, category, departmentId, price, refRange, unit | 3.13 |
+| 229 | [P] 创建 ExaminationOrder 实体 | `server/src/domain/entities/ExaminationOrder.ts` | id, appointmentId, patientId, doctorId, status, clinicalDiag | 3.13 |
+| 230 | [P] 创建 IExaminationItemRepository 接口 | `server/src/domain/repositories/IExaminationItemRepository.ts` | findAll, findByDepartmentId, findById | 3.13 |
+| 231 | [P] 创建 IExaminationOrderRepository 接口 | `server/src/domain/repositories/IExaminationOrderRepository.ts` | create, findById, findByPatientId, updateStatus | 3.13 |
+| 232 | [P] 创建 IExaminationReportRepository 接口 | `server/src/domain/repositories/IExaminationReportRepository.ts` | findByOrderId, create | 3.13 |
+
+### 12.2 应用层 & 基础设施
+
+| # | 任务 | 文件 | 说明 |
+|---|------|------|------|
+| 233 | [P] 实现 PrismaExaminationItemRepository | `server/src/infrastructure/repositories/PrismaExaminationItemRepository.ts` | 实现 IExaminationItemRepository |
+| 234 | [P] 实现 PrismaExaminationOrderRepository | `server/src/infrastructure/repositories/PrismaExaminationOrderRepository.ts` | 实现 IExaminationOrderRepository |
+| 235 | [P] 实现 PrismaExaminationReportRepository | `server/src/infrastructure/repositories/PrismaExaminationReportRepository.ts` | 实现 IExaminationReportRepository |
+| 236 | [P] 实现 ExaminationUseCase | `server/src/application/use-cases/doctor/ExaminationUseCase.ts` | 开单、查询、录入结果 |
+
+### 12.3 API 层
+
+| # | 任务 | 文件 | 说明 | spec 追踪 |
+|---|------|------|------|-----------|
+| 237 | [P] 实现检查检验路由 | `server/src/routes/examinations.ts` | 检查项目查询、开单、报告录入 | 3.13 |
+| 238 | 更新 app.ts 挂载检查路由 | `server/src/app.ts` | 挂载 /api/examination* | — |
+
+### 12.4 前端
+
+| # | 任务 | 文件 | 说明 | spec 追踪 |
+|---|------|------|------|-----------|
+| 239 | [D] 更新前端类型 | `client/src/types/index.ts` | 增加 ExaminationItem, ExaminationOrder 等类型 | — |
+| 240 | [D] 创建检查 API service | `client/src/api/examinations.ts` | getItems, createOrder, getOrders, submitReport | 3.13 |
+| 241 | [D] 创建医生开检查单页 | `client/src/pages/doctor/ExaminationPage.tsx` | 选择项目、开单 | 3.13 |
+| 242 | [P] 创建患者查看检查报告页 | `client/src/pages/patient/ExaminationPage.tsx` | 查看报告详情 | 3.13 |
+| 243 | [P] 创建管理员检查项目管理页 | `client/src/pages/admin/ExaminationItemManagePage.tsx` | CRUD 检查项目 | 3.13 |
+| 244 | [D] 更新 DoctorLayout 导航 | `client/src/components/layout/DoctorLayout.tsx` | 增加"开检查单"入口 | — |
+| 245 | 更新 AdminLayout 导航 | `client/src/components/layout/AdminLayout.tsx` | 增加"检查项目管理"入口 | — |
+
+### 12.5 种子数据
+
+| # | 任务 | 文件 | 说明 |
+|---|------|------|------|
+| 246 | 更新种子数据 | `server/prisma/seed.ts` | 添加常用检查项目（血常规、尿常规、肝功能、CT、X光等） |
+
+## Phase 13: 住院管理
+
+> 病房床位管理、入院出院、医嘱、病程记录、每日体征。
+
+### 13.1 数据库 & 领域层
+
+| # | 任务 | 文件 | 说明 | spec 追踪 |
+|---|------|------|------|-----------|
+| 247 | Prisma Schema: 新增 Ward/Bed/Admission/MedicalOrder/MedicalRecord/DailyChart 表 | `server/prisma/schema.prisma` | 六张表覆盖住院全流程 | 3.14 |
+| 248 | 运行 Prisma 迁移 | `server/prisma/migrations/` | `npx prisma migrate dev` | — |
+| 249 | [P] 创建 Ward/Bed/Admission 实体 | `server/src/domain/entities/` | 三个实体文件 | 3.14 |
+| 250 | [P] 创建 MedicalOrder/MedicalRecord/DailyChart 实体 | `server/src/domain/entities/` | 三个实体文件 | 3.14 |
+| 251 | [P] 创建 IWardRepository 接口 | `server/src/domain/repositories/IWardRepository.ts` | findAll, findById, create | 3.14 |
+| 252 | [P] 创建 IBedRepository 接口 | `server/src/domain/repositories/IBedRepository.ts` | findByWardId, updateStatus | 3.14 |
+| 253 | [P] 创建 IAdmissionRepository 接口 | `server/src/domain/repositories/IAdmissionRepository.ts` | create, findById, findByPatientId, findByStatus, discharge | 3.14 |
+| 254 | [P] 创建 IMedicalOrderRepository 接口 | `server/src/domain/repositories/IMedicalOrderRepository.ts` | findByAdmissionId, create, stop | 3.14 |
+| 255 | [P] 创建 IMedicalRecordRepository 接口 | `server/src/domain/repositories/IMedicalRecordRepository.ts` | findByAdmissionId, create | 3.14 |
+| 256 | [P] 创建 IDailyChartRepository 接口 | `server/src/domain/repositories/IDailyChartRepository.ts` | findByAdmissionId, upsert | 3.14 |
+
+### 13.2 应用层 & 基础设施
+
+| # | 任务 | 文件 | 说明 |
+|---|------|------|------|
+| 257 | [P] 实现 PrismaWardRepository | `server/src/infrastructure/repositories/PrismaWardRepository.ts` | — |
+| 258 | [P] 实现 PrismaBedRepository | `server/src/infrastructure/repositories/PrismaBedRepository.ts` | — |
+| 259 | [P] 实现 PrismaAdmissionRepository | `server/src/infrastructure/repositories/PrismaAdmissionRepository.ts` | — |
+| 260 | [P] 实现 PrismaMedicalOrderRepository | `server/src/infrastructure/repositories/PrismaMedicalOrderRepository.ts` | — |
+| 261 | [P] 实现 PrismaMedicalRecordRepository | `server/src/infrastructure/repositories/PrismaMedicalRecordRepository.ts` | — |
+| 262 | [P] 实现 PrismaDailyChartRepository | `server/src/infrastructure/repositories/PrismaDailyChartRepository.ts` | — |
+| 263 | [P] 实现 AdmissionUseCase | `server/src/application/use-cases/doctor/AdmissionUseCase.ts` | 入院申请、医嘱、病程、体征、出院 |
+
+### 13.3 API 层
+
+| # | 任务 | 文件 | 说明 | spec 追踪 |
+|---|------|------|------|-----------|
+| 264 | [P] 实现住院路由 | `server/src/routes/admissions.ts` | 病房床位 CRUD + 住院全流程 API | 3.14 |
+| 265 | 更新 app.ts 挂载住院路由 | `server/src/app.ts` | 挂载 /api/wards, /api/admissions | — |
+
+### 13.4 前端
+
+| # | 任务 | 文件 | 说明 | spec 追踪 |
+|---|------|------|------|-----------|
+| 266 | [P] 更新前端类型 | `client/src/types/index.ts` | 增加 Ward, Bed, Admission, MedicalOrder 等类型 | — |
+| 267 | [P] 创建住院 API service | `client/src/api/admissions.ts` | 全部住院相关 API | 3.14 |
+| 268 | [P] 创建医生住院管理页 | `client/src/pages/doctor/WardManagePage.tsx` | 住院患者列表 | 3.14 |
+| 269 | [P] 创建住院患者详情页 | `client/src/pages/doctor/AdmissionDetailPage.tsx` | 医嘱、病程、体温单 Tab | 3.14 |
+| 270 | [P] 创建管理员病房床位管理页 | `client/src/pages/admin/WardManagePage.tsx` | 病房床位 CRUD | 3.14 |
+| 271 | [P] 创建管理员入院出院管理页 | `client/src/pages/admin/AdmissionManagePage.tsx` | 入院审批、出院结算 | 3.14 |
+| 272 | 更新 DoctorLayout 导航 | `client/src/components/layout/DoctorLayout.tsx` | 增加"住院管理"入口 | — |
+| 273 | 更新 AdminLayout 导航 | `client/src/components/layout/AdminLayout.tsx` | 增加"病房管理""入院出院"入口 | — |
+
+### 13.5 种子数据
+
+| # | 任务 | 文件 | 说明 |
+|---|------|------|------|
+| 274 | 更新种子数据 | `server/prisma/seed.ts` | 添加示范病房和床位 |
+
+## Phase 14: 电子病历
+
+> 患者完整病历档案，整合门诊、检查、住院记录。
+
+### 14.1 应用层
+
+| # | 任务 | 文件 | 说明 | spec 追踪 |
+|---|------|------|------|-----------|
+| 275 | [P] 实现 MedicalRecordUseCase | `server/src/application/use-cases/doctor/MedicalRecordUseCase.ts` | 汇总患者所有就诊/检查/住院记录 | 3.15 |
+| 276 | 更新 IUserRepository | `server/src/domain/repositories/IUserRepository.ts` | 增加 updateMedicalInfo（过敏史、既往病史）方法 | 3.15 |
+
+### 14.2 API 层
+
+| # | 任务 | 文件 | 说明 | spec 追踪 |
+|---|------|------|------|-----------|
+| 277 | [P] 实现电子病历路由 | `server/src/routes/medical-records.ts` | GET /api/patients/:id/medical-record | 3.15 |
+| 278 | 更新 app.ts 挂载病历路由 | `server/src/app.ts` | 挂载 /api/patients — | |
+
+### 14.3 前端
+
+| # | 任务 | 文件 | 说明 | spec 追踪 |
+|---|------|------|------|-----------|
+| 279 | [P] 更新前端类型 | `client/src/types/index.ts` | 增加 MedicalRecordResponse 类型 | — |
+| 280 | [P] 创建病历 API service | `client/src/api/medicalRecords.ts` | getMedicalRecord | 3.15 |
+| 281 | [P] 创建病历页面 | `client/src/pages/doctor/MedicalRecordPage.tsx` | 时间线展示，含门诊/检查/住院 Tab | 3.15 |
+| 282 | 更新 DoctorLayout 路由 | `client/src/router/index.tsx` | 增加病历路由 | — |
+| 283 | 更新医生端患者历史页 | `client/src/pages/doctor/PatientHistoryPage.tsx` | 增加"完整病历"入口 | — |
+
 ## 任务统计更新
 
 | 阶段 | 测试任务数 | 实现任务数 | 合计 |
 |------|-----------|-----------|------|
 | Phase 11: 药品数据库 | 0 | 17 | 17 |
-| **总计** | **38** | **171** | **209** |
+| Phase 12: 检查检验模块 | 0 | 21 | 21 |
+| Phase 13: 住院管理 | 0 | 28 | 28 |
+| Phase 14: 电子病历 | 0 | 9 | 9 |
+| **总计** | **38** | **229** | **267** |
 
 ## 依赖关系总图
 
@@ -584,6 +722,15 @@ Phase 10 (消息通知)    ←── 依赖 Phase 8 就绪（集成到现有 Use
      │
      ▼
 Phase 11 (药品数据库)  ←── 独立，可在任意阶段后实施
+     │
+     ▼
+Phase 12 (检查检验模块) ←── 依赖 Phase 4/5/6 就绪
+     │
+     ▼
+Phase 13 (住院管理)     ←── 依赖 Phase 12（床位关联科室）
+     │
+     ▼
+Phase 14 (电子病历)     ←── 依赖 Phase 12/13（汇总检查/住院记录）
 ```
 
 ### 阶段间并行说明
@@ -613,4 +760,7 @@ Phase 11 (药品数据库)  ←── 独立，可在任意阶段后实施
 | Phase 9: 体验增强 | 2 | 20 | 22 |
 | Phase 10: 消息通知 | 0 | 21 | 21 |
 | Phase 11: 药品数据库 | 0 | 17 | 17 |
-| **总计** | **38** | **171** | **209** |
+| Phase 12: 检查检验模块 | 0 | 21 | 21 |
+| Phase 13: 住院管理 | 0 | 28 | 28 |
+| Phase 14: 电子病历 | 0 | 9 | 9 |
+| **总计** | **38** | **229** | **267** |

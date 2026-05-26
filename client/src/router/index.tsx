@@ -12,6 +12,7 @@ import DoctorListPage from '../pages/patient/DoctorListPage';
 import BookingPage from '../pages/patient/BookingPage';
 import BookingConfirmPage from '../pages/patient/BookingConfirmPage';
 import MyAppointmentsPage from '../pages/patient/MyAppointmentsPage';
+import PatientExaminationPage from '../pages/patient/ExaminationPage';
 import PatientProfilePage from '../pages/patient/ProfilePage';
 import DashboardPage from '../pages/doctor/DashboardPage';
 import DoctorAppointmentListPage from '../pages/doctor/AppointmentListPage';
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
       { path: 'doctors/:id/book', element: <RoleGuard roles={['PATIENT']}><BookingPage /></RoleGuard> },
       { path: 'book/confirm', element: <RoleGuard roles={['PATIENT']}><BookingConfirmPage /></RoleGuard> },
       { path: 'appointments', element: <RoleGuard roles={['PATIENT']}><MyAppointmentsPage /></RoleGuard> },
+      { path: 'examinations', element: <RoleGuard roles={['PATIENT']}><PatientExaminationPage /></RoleGuard> },
       { path: 'profile', element: <RoleGuard roles={['PATIENT']}><PatientProfilePage /></RoleGuard> },
     ],
   },

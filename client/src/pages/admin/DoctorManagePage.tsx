@@ -46,7 +46,7 @@ export default function DoctorManagePage() {
     { title: '职称', dataIndex: 'title', key: 'title' },
     {
       title: '状态', dataIndex: 'status', key: 'status',
-      render: (s: string) => s === 'DISABLED' ? <Tag color="error">已停用</Tag> : <Tag color="success">正常</Tag>,
+      render: (s: string) => s === 'DISABLED' ? <Tag>已停用</Tag> : <Tag>正常</Tag>,
     },
     {
       title: '操作', key: 'action',
@@ -67,7 +67,7 @@ export default function DoctorManagePage() {
         <h2>医生管理</h2>
         <Button type="primary" onClick={() => { setEditing(null); form.resetFields(); setOpen(true); }}>新增医生</Button>
       </div>
-      <Table dataSource={data} columns={columns} rowKey="id" pagination={false} />
+      <Table dataSource={data} columns={columns} rowKey="id" pagination={false} locale={{ emptyText: '暂无医生，请点击右上角"新增医生"添加' }} />
       <Modal title={editing ? '编辑医生' : '新增医生'} open={open} onOk={handleSave} onCancel={() => { setOpen(false); setEditing(null); }}>
         <Form form={form} layout="vertical">
           {!editing && (

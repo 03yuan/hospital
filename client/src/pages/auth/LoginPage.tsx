@@ -20,7 +20,7 @@ export default function LoginPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f0f2f5' }}>
-      <div style={{ fontSize: 56, fontWeight: 'bold', color: '#003399', marginBottom: 16 }}>南工职大附属医院</div>
+      <div style={{ fontSize: 56, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 16 }}>南工职大附属医院</div>
       <Card title="医院门诊挂号诊断系统 - 登录" style={{ width: 400, marginTop: 80 }}>
         <Form layout="vertical" onFinish={onFinish}>
           <Form.Item name="phone" label="手机号" rules={[{ required: true, pattern: /^1\d{10}$/, message: '请输入正确的手机号' }]}>

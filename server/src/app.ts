@@ -16,6 +16,7 @@ import { adminDepartmentRouter, initAdminDepartmentRoutes } from './routes/admin
 import { adminDoctorRouter, initAdminDoctorRoutes } from './routes/admin/doctors';
 import { adminScheduleRouter, initAdminScheduleRoutes } from './routes/admin/schedules';
 import { adminStatisticsRouter, initAdminStatisticsRoutes } from './routes/admin/statistics';
+import { adminPatientRouter } from './routes/admin/patients';
 import { notificationRouter, initNotificationRoutes } from './routes/notifications';
 import { PrismaClient } from '@prisma/client';
 import { PrismaUserRepository } from './infrastructure/repositories/PrismaUserRepository';
@@ -28,6 +29,7 @@ import { PrismaNotificationRepository } from './infrastructure/repositories/Pris
 import { PrismaMedicineCategoryRepository } from './infrastructure/repositories/PrismaMedicineCategoryRepository';
 import { PrismaMedicineRepository } from './infrastructure/repositories/PrismaMedicineRepository';
 import { initMedicineRoutes } from './routes/medicines';
+import { examinationRouter } from './routes/examinations';
 
 const app = express();
 
@@ -66,7 +68,9 @@ function initRoutes() {
   app.use('/api/admin/doctors', initAdminDoctorRoutes(doctorRepo, userRepo, deptRepo));
   app.use('/api/admin/schedules', initAdminScheduleRoutes(scheduleRepo));
   app.use('/api/admin/statistics', initAdminStatisticsRoutes(appointmentRepo, deptRepo, doctorRepo));
+  app.use('/api/admin/patients', adminPatientRouter);
   app.use('/api', initMedicineRoutes(medicineCategoryRepo, medicineRepo));
+  app.use('/api', examinationRouter);
 }
 
 initRoutes();

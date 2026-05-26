@@ -78,4 +78,19 @@ export class NotificationService {
       }),
     );
   }
+
+  async onExaminationOrderCreated(
+    patientUserId: number,
+    doctorName: string,
+    itemCount: number,
+  ): Promise<void> {
+    await this.notificationRepo.create(
+      new Notification({
+        userId: patientUserId,
+        title: '检查单已开具',
+        content: `${doctorName} 为您开具了 ${itemCount} 项检查，请前往检验科执行`,
+        relatedUrl: '/patient/appointments',
+      }),
+    );
+  }
 }

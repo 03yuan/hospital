@@ -90,7 +90,7 @@ export function NotificationBell() {
                 onClick={() => handleMarkRead(item)}
                 style={{
                   cursor: 'pointer',
-                  background: item.isRead ? '#fff' : '#f0f5ff',
+                  background: item.isRead ? '#fff' : '#f5f5f5',
                   padding: '8px 12px',
                   borderRadius: 4,
                   marginBottom: 4,

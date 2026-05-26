@@ -47,7 +47,7 @@ export default function DepartmentManagePage() {
     { title: '描述', dataIndex: 'description', key: 'description' },
     {
       title: '状态', dataIndex: 'status', key: 'status',
-      render: (s: string) => <Tag color={s === 'ACTIVE' ? 'green' : 'red'}>{s === 'ACTIVE' ? '启用' : '停用'}</Tag>,
+      render: (s: string) => <Tag>{s === 'ACTIVE' ? '启用' : '停用'}</Tag>,
     },
     {
       title: '操作', key: 'action',
@@ -71,7 +71,7 @@ export default function DepartmentManagePage() {
         <h2>科室管理</h2>
         <Button type="primary" onClick={() => { setEditing(null); form.resetFields(); setOpen(true); }}>新增科室</Button>
       </div>
-      <Table dataSource={data} columns={columns} rowKey="id" pagination={false} />
+      <Table dataSource={data} columns={columns} rowKey="id" pagination={false} locale={{ emptyText: '暂无科室，请点击右上角"新增科室"添加' }} />
       <Modal
         title={editing ? '编辑科室' : '新增科室'}
         open={open}

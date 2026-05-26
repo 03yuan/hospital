@@ -71,6 +71,7 @@ model Department {
 
   doctors   Doctor[]
   appointments Appointment[]
+  examinationItems ExaminationItem[]
 }
 
 model Schedule {
@@ -107,6 +108,7 @@ model Appointment {
   department   Department    @relation(fields: [departmentId], references: [id])
   schedule     Schedule      @relation(fields: [scheduleId], references: [id])
   prescriptions Prescription[]
+  examinationOrders ExaminationOrder[]
 
   @@index([patientId, status])
   @@index([doctorId, date])
@@ -147,6 +149,66 @@ model Medicine {
 
   @@unique([categoryId, name])
   @@index([categoryId])
+}
+
+model ExaminationItem {
+  id           Int      @id @default(autoincrement())
+  name         String
+  category     String                    // 检验 / 影像
+  departmentId Int
+  price        Decimal  @db.Decimal(10,2)
+  refRange     String?
+  unit         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  department   Department @relation(fields: [departmentId], references: [id])
+  items        ExaminationOrderItem[]
+
+  @@index([departmentId])
+}
+
+model ExaminationOrder {
+  id            Int      @id @default(autoincrement())
+  appointmentId Int?
+  patientId     Int
+  doctorId      Int
+  status        String   @default("PENDING")
+  clinicalDiag  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+  items       ExaminationOrderItem[]
+  reports     ExaminationReport[]
+
+  @@index([patientId])
+  @@index([appointmentId])
+}
+
+model ExaminationOrderItem {
+  id                Int      @id @default(autoincrement())
+  orderId           Int
+  examinationItemId Int
+  result            String?
+  refRange          String?
+  unit              String?
+  createdAt         DateTime @default(now())
+
+  order           ExaminationOrder  @relation(fields: [orderId], references: [id])
+  examinationItem ExaminationItem   @relation(fields: [examinationItemId], references: [id])
+
+  @@unique([orderId, examinationItemId])
+}
+
+model ExaminationReport {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  content   String?
+  images    String?
+  createdAt DateTime @default(now())
+
+  order     ExaminationOrder @relation(fields: [orderId], references: [id])
 }
 
 model Notification {

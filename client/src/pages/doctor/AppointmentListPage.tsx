@@ -64,7 +64,7 @@ export default function AppointmentListPage() {
         onChange={(d) => d && setDate(d.format('YYYY-MM-DD'))}
         style={{ marginBottom: 16 }}
       />
-      <Table dataSource={appointments} columns={columns} rowKey="id" pagination={false} />
+      <Table dataSource={appointments} columns={columns} rowKey="id" pagination={false} locale={{ emptyText: '该日暂无预约' }} />
     </div>
   );
 }

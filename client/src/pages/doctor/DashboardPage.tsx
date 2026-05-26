@@ -3,11 +3,12 @@ import { Table, Tag, Button, message, Space, Modal, Input, List, Select } from '
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import client from '../../api/client';
-import { Appointment, Prescription, MedicineCategory, Medicine } from '../../types';
+import { Appointment, Prescription, MedicineCategory, Medicine, ExaminationItem } from '../../types';
 import { formatHour } from '../../utils/format';
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_COLORS } from '../../utils/constants';
 import { updateDiagnosis, getPrescriptions, addPrescription, deletePrescription } from '../../api/doctor';
 import { getMedicineCategories, getMedicines } from '../../api/medicines';
+import { getExaminationItems, createExaminationOrder, getExaminationOrders } from '../../api/examinations';
 
 const { TextArea } = Input;
 
@@ -22,6 +23,12 @@ export default function DashboardPage() {
   const [newMedicine, setNewMedicine] = useState({ medicineName: '', dosage: '', method: '', days: 1 });
   const [medicineCategories, setMedicineCategories] = useState<MedicineCategory[]>([]);
   const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [examModalOpen, setExamModalOpen] = useState(false);
+  const [examItems, setExamItems] = useState<ExaminationItem[]>([]);
+  const [selectedExamItems, setSelectedExamItems] = useState<number[]>([]);
+  const [clinicalDiag, setClinicalDiag] = useState('');
+  const [examOrders, setExamOrders] = useState<any[]>([]);
+  const examPrintRef = useRef<HTMLDivElement>(null);
   const today = dayjs().format('YYYY-MM-DD');
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -119,6 +126,74 @@ export default function DashboardPage() {
     }
   };
 
+  const openExamModal = async (appt: Appointment) => {
+    setSelectedAppointment(appt);
+    setSelectedExamItems([]);
+    setClinicalDiag('');
+    setExamOrders([]);
+    setExamModalOpen(true);
+    try {
+      const [itemsRes, ordersRes] = await Promise.all([
+        getExaminationItems(),
+        getExaminationOrders(undefined, appt.id),
+      ]);
+      setExamItems(itemsRes.data);
+      setExamOrders(ordersRes.data);
+    } catch {
+      message.error('获取数据失败');
+    }
+  };
+
+  const handleCreateExamOrder = async () => {
+    if (!selectedAppointment || selectedExamItems.length === 0) {
+      message.warning('请选择检查项目');
+      return;
+    }
+    try {
+      await createExaminationOrder({
+        patientId: selectedAppointment.patientId,
+        appointmentId: selectedAppointment.id,
+        clinicalDiag: clinicalDiag || undefined,
+        itemIds: selectedExamItems,
+      });
+      message.success('检查单已开具');
+      const ordersRes = await getExaminationOrders(undefined, selectedAppointment!.id);
+      setExamOrders(ordersRes.data);
+    } catch {
+      message.error('开检查单失败');
+    }
+  };
+
+  const handleExamPrint = () => {
+    if (examOrders.length === 0) { message.warning('暂无检查单可打印'); return; }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) { message.error('浏览器阻止了打印窗口'); return; }
+    printWindow.document.write(`
+      <html><head><title>检查单</title>
+      <style>
+        body { font-family: SimSun, serif; padding: 40px; }
+        h2 { text-align: center; margin-bottom: 24px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { border: 1px solid #333; padding: 8px; text-align: left; font-size: 14px; }
+        th { background: #f0f0f0; }
+        .info { margin-bottom: 8px; font-size: 14px; }
+        .footer { margin-top: 48px; text-align: right; font-size: 14px; }
+      </style></head><body>
+      <h2>医院门诊检查申请单</h2>
+      <div class="info"><strong>患者：</strong>${selectedAppointment?.patientName || ''}</div>
+      <div class="info"><strong>诊断：</strong>${examOrders[0]?.clinicalDiag || '（未填写）'}</div>
+      <table><tr><th>项目名称</th><th>类别</th><th>参考范围</th><th>单位</th></tr>
+      ${examOrders.flatMap(o => o.items).map((i: any) =>
+        `<tr><td>${i.itemName}</td><td>${i.category}</td><td>${i.refRange || '-'}</td><td>${i.unit || '-'}</td></tr>`
+      ).join('')}
+      </table>
+      <div class="footer">医生签名：______________<br>日期：${dayjs().format('YYYY年MM月DD日')}</div>
+      <script>window.onload=function(){window.print();window.close()}</script>
+      </body></html>
+    `);
+    printWindow.document.close();
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -168,6 +243,7 @@ export default function DashboardPage() {
         ) : r.status === 'VISITED' ? (
           <Space>
             <Button size="small" onClick={() => openDiagnosisModal(r)}>诊断</Button>
+            <Button size="small" onClick={() => openExamModal(r)}>开检查</Button>
             <Button size="small" onClick={() => openPrescriptionModal(r)}>开药</Button>
             <Button size="small" onClick={() => openPrescriptionModal(r)}>打印处方</Button>
           </Space>
@@ -179,7 +255,7 @@ export default function DashboardPage() {
   return (
     <div>
       <h2>今日待就诊 ({today})</h2>
-      <Table dataSource={appointments} columns={columns} rowKey="id" pagination={false} />
+      <Table dataSource={appointments} columns={columns} rowKey="id" pagination={false} locale={{ emptyText: '今日暂无患者就诊' }} />
 
       <Modal
         title="填写诊断"
@@ -284,6 +360,61 @@ export default function DashboardPage() {
             </Space>
           </Space>
         </div>
+      </Modal>
+      <Modal
+        title="开检查单"
+        open={examModalOpen}
+        onOk={handleCreateExamOrder}
+        onCancel={() => setExamModalOpen(false)}
+        width={600}
+      >
+        {selectedAppointment && (
+          <p><strong>患者：</strong>{selectedAppointment.patientName}</p>
+        )}
+        <div style={{ marginBottom: 12 }}>
+          <p style={{ marginBottom: 4 }}><strong>临床诊断（选填）：</strong></p>
+          <Input value={clinicalDiag} onChange={(e) => setClinicalDiag(e.target.value)} placeholder="输入临床诊断" />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ marginBottom: 4 }}><strong>选择检查项目：</strong></p>
+          <Select
+            mode="multiple"
+            placeholder="请选择检查项目"
+            style={{ width: '100%' }}
+            value={selectedExamItems}
+            onChange={setSelectedExamItems}
+            options={examItems.map((i) => ({
+              label: `${i.name}（${i.category}）¥${i.price}`,
+              value: i.id,
+            }))}
+          />
+        </div>
+        <Space style={{ marginBottom: 12 }}>
+          <Button type="primary" onClick={handleCreateExamOrder}>开检查单</Button>
+          <Button onClick={handleExamPrint}>打印检查单</Button>
+        </Space>
+        {examOrders.length > 0 && (
+          <>
+            <h4 style={{ marginTop: 16 }}>已开检查单</h4>
+            <Table
+              dataSource={examOrders}
+              columns={[
+                { title: '编号', dataIndex: 'id', key: 'id' },
+                { title: '项目数', key: 'count', render: (_: any, r: any) => r.items.length },
+                { title: '状态', dataIndex: 'status', key: 'status',
+                  render: (s: string) => {
+                    const m: Record<string, string> = { PENDING: '待缴费', PAID: '已缴费', IN_PROGRESS: '执行中', COMPLETED: '已完成' };
+                    return <Tag>{m[s] || s}</Tag>;
+                  },
+                },
+                { title: '开单时间', dataIndex: 'createdAt', key: 'createdAt', render: (v: string) => v.slice(0, 16) },
+              ]}
+              rowKey="id"
+              pagination={false}
+              size="small"
+            />
+          </>
+        )}
       </Modal>
     </div>
   );

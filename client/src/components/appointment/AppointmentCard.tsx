@@ -28,13 +28,13 @@ export function AppointmentCard({ id, departmentName, doctorName, date, hour, st
         </div>
         {symptom && (
           <div style={{ color: '#666', fontSize: 13 }}>
-            <Tag color="blue" style={{ marginRight: 4 }}>病情描述</Tag>
+            <Tag style={{ marginRight: 4 }}>病情描述</Tag>
             {symptom}
           </div>
         )}
         {status === 'VISITED' && diagnosis && (
           <div style={{ color: '#666', fontSize: 13 }}>
-            <Tag color="green" style={{ marginRight: 4 }}>诊断</Tag>
+            <Tag style={{ marginRight: 4 }}>诊断</Tag>
             {diagnosis}
           </div>
         )}

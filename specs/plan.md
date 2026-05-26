@@ -91,16 +91,23 @@ hospital/
 │   │   │   │   ├── BookingPage.tsx          # 含出诊日历视图 + 时段选择
 │   │   │   │   ├── BookingConfirmPage.tsx
 │   │   │   │   ├── MyAppointmentsPage.tsx
+│   │   │   │   ├── ExaminationPage.tsx      # 检查报告查看
 │   │   │   │   └── ProfilePage.tsx          # 患者编辑个人信息
 │   │   │   ├── doctor/
 │   │   │   │   ├── DashboardPage.tsx
 │   │   │   │   ├── AppointmentListPage.tsx
 │   │   │   │   ├── ProfilePage.tsx          # 医生编辑个人资料
-│   │   │   │   └── PatientHistoryPage.tsx   # 查看患者就诊历史
+│   │   │   │   ├── PatientHistoryPage.tsx   # 查看患者就诊历史
+│   │   │   │   ├── ExaminationPage.tsx      # 开检查单
+│   │   │   │   ├── WardManagePage.tsx       # 住院管理
+│   │   │   │   └── AdmissionDetailPage.tsx  # 住院患者详情
 │   │   │   └── admin/
 │   │   │       ├── DepartmentManagePage.tsx
 │   │   │       ├── DoctorManagePage.tsx
 │   │   │       ├── ScheduleManagePage.tsx
+│   │   │       ├── ExaminationItemManagePage.tsx  # 检查项目管理
+│   │   │       ├── WardManagePage.tsx             # 病房床位管理
+│   │   │       ├── AdmissionManagePage.tsx        # 入院审批出院结算
 │   │   │       └── StatisticsPage.tsx
 │   │   ├── components/
 │   │   │   ├── layout/
@@ -138,8 +145,20 @@ hospital/
 
 ```
 User 1──N Appointment N──1 Doctor N──1 Department
-                                         
+User 1──N ExaminationOrder
+User 1──N Admission
+
 Schedule 1──N Appointment
+
+ExaminationItem N──1 Department
+ExaminationOrder 1──N ExaminationOrderItem N──1 ExaminationItem
+ExaminationOrder 1──N ExaminationReport
+
+Ward N──1 Department
+Ward 1──N Bed 1──1 Admission
+Admission 1──N MedicalOrder
+Admission 1──N MedicalRecord
+Admission 1──N DailyChart
 ```
 
 ### 3.2 数据表定义（Prisma Schema）
@@ -272,6 +291,156 @@ model Prescription {
   appointment Appointment @relation(fields: [appointmentId], references: [id])
 
   @@index([appointmentId])
+}
+
+model ExaminationItem {
+  id          Int      @id @default(autoincrement())
+  name        String                    // 项目名称，如"血常规"
+  category    String                    // 分类：检验 / 影像
+  departmentId Int                     // 所属科室
+  price       Decimal  @db.Decimal(10,2) // 价格
+  refRange    String?                   // 参考值范围
+  unit        String?                   // 单位
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  department  Department @relation(fields: [departmentId], references: [id])
+  items       ExaminationOrderItem[]
+
+  @@index([departmentId])
+}
+
+model ExaminationOrder {
+  id            Int      @id @default(autoincrement())
+  appointmentId Int?
+  patientId     Int
+  doctorId      Int
+  status        String   @default("PENDING") // PENDING / PAID / IN_PROGRESS / COMPLETED
+  clinicalDiag  String?                     // 临床诊断
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+  patient     User         @relation(fields: [patientId], references: [id])
+  doctor      Doctor       @relation(fields: [doctorId], references: [id])
+  items       ExaminationOrderItem[]
+  reports     ExaminationReport[]
+
+  @@index([patientId])
+  @@index([appointmentId])
+}
+
+model ExaminationOrderItem {
+  id              Int      @id @default(autoincrement())
+  orderId         Int
+  examinationItemId Int
+  result          String?  // 检验结果数值或文本
+  refRange        String?  // 当前参考值
+  unit            String?  // 单位
+  createdAt       DateTime @default(now())
+
+  order           ExaminationOrder   @relation(fields: [orderId], references: [id])
+  examinationItem ExaminationItem    @relation(fields: [examinationItemId], references: [id])
+
+  @@unique([orderId, examinationItemId])
+}
+
+model ExaminationReport {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  content   String?  // 报告文本
+  images    String?  // 图片附件 JSON 数组
+  createdAt DateTime @default(now())
+
+  order     ExaminationOrder @relation(fields: [orderId], references: [id])
+}
+
+model Ward {
+  id           Int      @id @default(autoincrement())
+  name         String   // 病房名，如"内科一病区"
+  departmentId Int
+  description  String?
+  createdAt    DateTime @default(now())
+
+  department   Department @relation(fields: [departmentId], references: [id])
+  beds         Bed[]
+
+  @@index([departmentId])
+}
+
+model Bed {
+  id       Int    @id @default(autoincrement())
+  wardId   Int
+  bedNumber String // 床位号，如"101-1"
+  status   String @default("AVAILABLE") // AVAILABLE / OCCUPIED
+
+  ward     Ward   @relation(fields: [wardId], references: [id])
+  admission Admissions?
+
+  @@unique([wardId, bedNumber])
+}
+
+model Admission {
+  id            Int      @id @default(autoincrement())
+  patientId     Int
+  doctorId      Int
+  bedId         Int      @unique
+  diagnosis     String   // 入院诊断
+  status        String   @default("ADMITTED") // ADMITTED / DISCHARGED
+  admittedAt    DateTime @default(now())
+  dischargedAt  DateTime?
+
+  patient       User     @relation(fields: [patientId], references: [id])
+  doctor        Doctor   @relation(fields: [doctorId], references: [id])
+  bed           Bed      @relation(fields: [bedId], references: [id])
+  orders        MedicalOrder[]
+  records       MedicalRecord[]
+  dailyCharts   DailyChart[]
+
+  @@index([patientId])
+  @@index([status])
+}
+
+model MedicalOrder {
+  id          Int      @id @default(autoincrement())
+  admissionId Int
+  type        String   // LONG_TERM / TEMPORARY
+  content     String   // 医嘱内容
+  status      String   @default("ACTIVE") // ACTIVE / STOPPED
+  createdAt   DateTime @default(now())
+  stoppedAt   DateTime?
+
+  admission   Admission @relation(fields: [admissionId], references: [id])
+
+  @@index([admissionId])
+}
+
+model MedicalRecord {
+  id          Int      @id @default(autoincrement())
+  admissionId Int
+  content     String   // 病程记录内容
+  recordDate  DateTime @db.Date
+  createdAt   DateTime @default(now())
+
+  admission   Admission @relation(fields: [admissionId], references: [id])
+
+  @@index([admissionId])
+  @@index([recordDate])
+}
+
+model DailyChart {
+  id          Int      @id @default(autoincrement())
+  admissionId Int
+  recordDate  DateTime @db.Date
+  temperature Decimal? @db.Decimal(4,1) // 体温
+  pulse       Int?     // 脉搏
+  breath      Int?     // 呼吸
+  bloodPressure String? // 血压，如"120/80"
+  createdAt   DateTime @default(now())
+
+  admission   Admission @relation(fields: [admissionId], references: [id])
+
+  @@unique([admissionId, recordDate])
 }
 
 model MedicineCategory {
@@ -510,6 +679,35 @@ model Notification {
 ], "message": "ok" }
 ```
 
+#### 检查检验（需认证）
+
+| 方法 | 路径 | 说明 | spec 追踪 |
+|------|------|------|-----------|
+| GET  | `/api/examination-items?departmentId=` | 获取检查项目列表 | 3.13 |
+| POST | `/api/examination-orders` | 创建检查单（医生开单） | 3.13 |
+| GET  | `/api/examination-orders?patientId=` | 查询患者的检查单列表 | 3.13 |
+| GET  | `/api/examination-orders/:id` | 获取检查单详情（含项目结果） | 3.13 |
+| PATCH| `/api/examination-orders/:id/status` | 更新检查单状态 | 3.13 |
+| POST | `/api/examination-orders/:id/report` | 录入检查报告（含图片） | 3.13 |
+
+#### 住院管理（需认证）
+
+| 方法 | 路径 | 说明 | spec 追踪 |
+|------|------|------|-----------|
+| GET  | `/api/wards?departmentId=` | 获取病房列表 | 3.14 |
+| POST | `/api/wards` | 新增病房（管理员） | 3.14 |
+| GET  | `/api/beds?wardId=` | 获取床位列表 | 3.14 |
+| POST | `/api/beds` | 新增床位（管理员） | 3.14 |
+| POST | `/api/admissions` | 入院申请 | 3.14 |
+| GET  | `/api/admissions?status=` | 查询住院记录 | 3.14 |
+| PATCH| `/api/admissions/:id/discharge` | 出院结算 | 3.14 |
+| POST | `/api/admissions/:id/orders` | 添加医嘱 | 3.14 |
+| GET  | `/api/admissions/:id/orders` | 查看医嘱列表 | 3.14 |
+| POST | `/api/admissions/:id/records` | 添加病程记录 | 3.14 |
+| GET  | `/api/admissions/:id/records` | 查看病程记录 | 3.14 |
+| POST | `/api/admissions/:id/daily-chart` | 添加每日体征 | 3.14 |
+| GET  | `/api/admissions/:id/daily-chart` | 查看每日体征 | 3.14 |
+
 #### 管理员端（需 ADMIN 角色）
 
 | 方法 | 路径 | 说明 | spec 追踪 |
@@ -554,11 +752,17 @@ model Notification {
   /doctor/appointments        → AppointmentListPage   （按日期查看）
   /doctor/profile             → ProfilePage           （编辑个人资料）
   /doctor/patients/:id/history → PatientHistoryPage   （患者就诊历史）
+  /doctor/examination         → ExaminationPage       （开检查单）
+  /doctor/wards               → WardManagePage        （住院患者列表）
+  /doctor/wards/:id           → AdmissionDetailPage   （住院患者详情）
 
 /admin                        → AdminLayout
   /admin/departments          → DepartmentManagePage  （科室管理）
   /admin/doctors              → DoctorManagePage      （医生管理）
   /admin/schedules            → ScheduleManagePage    （排班管理）
+  /admin/examination-items    → ExaminationItemManagePage  （检查项目管理）
+  /admin/wards                → WardManagePage        （病房床位管理）
+  /admin/admissions           → AdmissionManagePage   （入院出院管理）
   /admin/statistics           → StatisticsPage        （数据统计）
 ```
 
@@ -810,6 +1014,12 @@ describe('cancelAppointment', () => {
 | | 前端：NotificationBell 组件、通知列表弹窗、各布局头部集成通知入口 | |
 | **Phase 11：药品数据库** | 后端：MedicineCategory + Medicine 表、种子数据、药品查询 API | 医生开药可按分类选择 |
 | | 前端：DashboardPage 处方面板改用按分类选择的 Select 组件 | |
+| **Phase 12：检查检验模块** | 后端：ExaminationItem/Order/Report 表、检查开单/报告 API | 可开检查单、录报告、查看结果 |
+| | 前端：医生开单页、检查报告查看页、项目管理页 | |
+| **Phase 13：住院管理** | 后端：Ward/Bed/Admission/MedicalOrder/MedicalRecord/DailyChart 表、住院全流程 API | 住院全流程管理 |
+| | 前端：病房床位管理、入院出院、医嘱病程体温单 | |
+| **Phase 14：电子病历** | 后端：病历汇总查询 API，整合就诊/检查/住院数据 | 患者完整病历档案 |
+| | 前端：病历时间线页面 | |
 
 ---
 
@@ -982,6 +1192,105 @@ interface Notification {
   relatedUrl?: string;
   isRead: boolean;
   createdAt: string;
+}
+
+interface ExaminationItem {
+  id: number;
+  name: string;
+  category: string;
+  departmentId: number;
+  departmentName: string;
+  price: number;
+  refRange?: string;
+  unit?: string;
+}
+
+interface ExaminationOrder {
+  id: number;
+  appointmentId?: number;
+  patientId: number;
+  patientName: string;
+  doctorId: number;
+  doctorName: string;
+  status: string;
+  clinicalDiag?: string;
+  items: ExaminationOrderItem[];
+  report?: ExaminationReport;
+  createdAt: string;
+}
+
+interface ExaminationOrderItem {
+  id: number;
+  examinationItemId: number;
+  itemName: string;
+  result?: string;
+  refRange?: string;
+  unit?: string;
+}
+
+interface ExaminationReport {
+  id: number;
+  orderId: number;
+  content?: string;
+  images?: string;
+  createdAt: string;
+}
+
+interface Ward {
+  id: number;
+  name: string;
+  departmentId: number;
+  departmentName: string;
+  description?: string;
+}
+
+interface Bed {
+  id: number;
+  wardId: number;
+  bedNumber: string;
+  status: string;
+}
+
+interface Admission {
+  id: number;
+  patientId: number;
+  patientName: string;
+  doctorId: number;
+  doctorName: string;
+  bedId: number;
+  wardName: string;
+  bedNumber: string;
+  diagnosis: string;
+  status: string;
+  admittedAt: string;
+  dischargedAt?: string;
+}
+
+interface MedicalOrder {
+  id: number;
+  admissionId: number;
+  type: string;
+  content: string;
+  status: string;
+  createdAt: string;
+}
+
+interface MedicalRecord {
+  id: number;
+  admissionId: number;
+  content: string;
+  recordDate: string;
+  createdAt: string;
+}
+
+interface DailyChart {
+  id: number;
+  admissionId: number;
+  recordDate: string;
+  temperature?: number;
+  pulse?: number;
+  breath?: number;
+  bloodPressure?: string;
 }
 
 interface NotificationListResponse {

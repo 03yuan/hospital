@@ -94,7 +94,7 @@ export default function BookingPage() {
                 onClick={() => setSelectedHour(item.hour)}
                 style={{
                   cursor: 'pointer',
-                  background: selectedHour === item.hour ? '#e6f7ff' : undefined,
+                  background: selectedHour === item.hour ? '#e8e8e8' : undefined,
                 }}
               >
                 {formatHour(item.hour)}

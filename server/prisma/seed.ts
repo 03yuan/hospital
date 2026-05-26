@@ -71,10 +71,35 @@ async function main() {
   }
   console.log(`已创建 ${doctorUsers.length} 名医生`);
 
+  // 创建示例患者
+  const patients = [
+    { phone: '13700000001', name: '赵明', password: '123456' },
+    { phone: '13700000002', name: '孙丽', password: '123456' },
+    { phone: '13700000003', name: '周伟', password: '123456' },
+    { phone: '13700000004', name: '吴婷', password: '123456' },
+    { phone: '13700000005', name: '郑刚', password: '123456' },
+  ];
+  for (const p of patients) {
+    await prisma.user.upsert({
+      where: { phone: p.phone },
+      update: {},
+      create: { phone: p.phone, password: p.password, name: p.name, role: 'PATIENT', status: 'ACTIVE' },
+    });
+  }
+  console.log(`已创建 ${patients.length} 名示例患者`);
+
   // 生成未来7天的排班
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   let scheduleCount = 0;
+
+  // 清除已有排班重新生成
+  await prisma.prescription.deleteMany();
+  await prisma.examinationOrderItem.deleteMany();
+  await prisma.examinationReport.deleteMany();
+  await prisma.examinationOrder.deleteMany();
+  await prisma.appointment.deleteMany();
+  await prisma.schedule.deleteMany();
 
   for (let day = 0; day < 7; day++) {
     const date = new Date(today);
@@ -84,26 +109,13 @@ async function main() {
     const dow = date.getDay();
     if (dow === 0 || dow === 6) continue;
 
+    const records: { doctorId: number; date: Date; hour: number }[] = [];
     for (let doctorId = 1; doctorId <= doctorUsers.length; doctorId++) {
-      // 上午 8:00-12:00
-      for (let h = 8; h < 12; h++) {
-        await prisma.schedule.upsert({
-          where: { doctorId_date_hour: { doctorId, date, hour: h } },
-          update: {},
-          create: { doctorId, date, hour: h },
-        });
-        scheduleCount++;
-      }
-      // 下午 14:00-17:00
-      for (let h = 14; h < 17; h++) {
-        await prisma.schedule.upsert({
-          where: { doctorId_date_hour: { doctorId, date, hour: h } },
-          update: {},
-          create: { doctorId, date, hour: h },
-        });
-        scheduleCount++;
-      }
+      for (let h = 8; h < 12; h++) records.push({ doctorId, date, hour: h });
+      for (let h = 14; h < 17; h++) records.push({ doctorId, date, hour: h });
     }
+    const result = await prisma.schedule.createMany({ data: records, skipDuplicates: true });
+    scheduleCount += result.count;
   }
   console.log(`已生成 ${scheduleCount} 条排班记录（未来7个工作日）`);
 
@@ -214,6 +226,40 @@ async function main() {
     }
   }
   console.log(`已创建 ${categories.length} 个药品分类和 ${medicinesByCategory.flat().length} 种药品`);
+
+  // 检查项目
+  const examItems = [
+    { name: '血常规', category: '检验', deptId: 1, price: 20, refRange: 'WBC 4-10×10⁹/L', unit: '' },
+    { name: '尿常规', category: '检验', deptId: 1, price: 15, refRange: '', unit: '' },
+    { name: '肝功能', category: '检验', deptId: 1, price: 60, refRange: 'ALT < 40U/L', unit: '' },
+    { name: '肾功能', category: '检验', deptId: 1, price: 50, refRange: 'Cr 44-133μmol/L', unit: '' },
+    { name: '血糖', category: '检验', deptId: 1, price: 10, refRange: '3.9-6.1mmol/L', unit: 'mmol/L' },
+    { name: '血脂', category: '检验', deptId: 1, price: 45, refRange: 'TC < 5.2mmol/L', unit: 'mmol/L' },
+    { name: '甲状腺功能', category: '检验', deptId: 1, price: 120, refRange: 'TSH 0.35-4.94mIU/L', unit: '' },
+    { name: '凝血功能', category: '检验', deptId: 2, price: 80, refRange: 'PT 11-14s', unit: 's' },
+    { name: '胸部X光', category: '影像', deptId: 1, price: 80, refRange: '', unit: '' },
+    { name: '腹部B超', category: '影像', deptId: 2, price: 150, refRange: '', unit: '' },
+    { name: '心电图', category: '影像', deptId: 1, price: 30, refRange: '', unit: '' },
+    { name: 'CT（头部）', category: '影像', deptId: 1, price: 300, refRange: '', unit: '' },
+    { name: 'CT（胸部）', category: '影像', deptId: 1, price: 350, refRange: '', unit: '' },
+    { name: 'MRI（核磁共振）', category: '影像', deptId: 2, price: 600, refRange: '', unit: '' },
+  ];
+
+  for (const item of examItems) {
+    await prisma.examinationItem.upsert({
+      where: { id: examItems.indexOf(item) + 1 },
+      update: {},
+      create: {
+        name: item.name,
+        category: item.category,
+        departmentId: item.deptId,
+        price: item.price,
+        refRange: item.refRange || null,
+        unit: item.unit || null,
+      },
+    });
+  }
+  console.log(`已创建 ${examItems.length} 个检查项目`);
 }
 
 main()

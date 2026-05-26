@@ -20,7 +20,7 @@ export function DoctorLayout() {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider>
-        <div style={{ color: '#fff', padding: 16, textAlign: 'center', fontSize: 16 }}>医生端</div>
+        <div style={{ color: '#fff', padding: 16, textAlign: 'center', fontSize: 16, fontWeight: 'bold' }}>南工职大附属医院</div>
         <Menu
           theme="dark"
           mode="inline"

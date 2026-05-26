@@ -149,6 +149,46 @@ export interface NotificationItem {
   createdAt: string;
 }
 
+export interface ExaminationItem {
+  id: number;
+  name: string;
+  category: string;
+  departmentId: number;
+  departmentName: string;
+  price: number;
+  refRange?: string;
+  unit?: string;
+}
+
+export interface ExaminationOrderItem {
+  id: number;
+  examinationItemId: number;
+  itemName: string;
+  category: string;
+  result?: string;
+  refRange?: string;
+  unit?: string;
+}
+
+export interface ExaminationReport {
+  id: number;
+  content?: string;
+  images?: string;
+  createdAt: string;
+}
+
+export interface ExaminationOrder {
+  id: number;
+  patientId: number;
+  doctorId: number;
+  appointmentId?: number;
+  status: string;
+  clinicalDiag?: string;
+  createdAt: string;
+  items: ExaminationOrderItem[];
+  report?: ExaminationReport | null;
+}
+
 export interface NotificationListResponse {
   list: NotificationItem[];
   total: number;

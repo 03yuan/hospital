@@ -1,7 +1,7 @@
 import { Layout, Menu, Button, Space } from 'antd';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { UserOutlined, CalendarOutlined, MedicineBoxOutlined, SettingOutlined } from '@ant-design/icons';
+import { UserOutlined, CalendarOutlined, MedicineBoxOutlined, SettingOutlined, ExperimentOutlined } from '@ant-design/icons';
 import { NotificationBell } from '../notification/NotificationBell';
 
 const { Header, Content } = Layout;
@@ -14,6 +14,7 @@ export function PatientLayout() {
   const menuItems = [
     { key: '/patient/departments', icon: <MedicineBoxOutlined />, label: '科室列表' },
     { key: '/patient/appointments', icon: <CalendarOutlined />, label: '我的预约' },
+    { key: '/patient/examinations', icon: <ExperimentOutlined />, label: '检查报告' },
     { key: '/patient/profile', icon: <SettingOutlined />, label: '个人中心' },
   ];
 
@@ -21,7 +22,7 @@ export function PatientLayout() {
     <Layout style={{ minHeight: '100vh' }}>
       <Header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <div style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>挂号系统</div>
+          <div style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>南工职大附属医院</div>
           <Menu
             theme="dark"
             mode="horizontal"

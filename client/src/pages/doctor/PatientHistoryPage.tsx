@@ -35,7 +35,7 @@ export default function PatientHistoryPage() {
       <h3>就诊历史</h3>
       <Timeline
         items={data.appointments.map((apt) => ({
-          color: apt.status === 'VISITED' ? 'green' : apt.status === 'CANCELLED' ? 'gray' : 'red',
+          color: 'gray',
           children: (
             <Card size="small" style={{ marginBottom: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
