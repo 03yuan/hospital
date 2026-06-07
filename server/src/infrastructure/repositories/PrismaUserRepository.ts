@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { IUserRepository } from '../../domain/repositories/IUserRepository';
 import { User } from '../../domain/entities/User';
@@ -24,10 +25,11 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async create(user: User): Promise<User> {
+    const hashedPassword = await bcrypt.hash(user.password, 10);
     const record = await this.prisma.user.create({
       data: {
         phone: user.phone,
-        password: user.password,
+        password: hashedPassword,
         name: user.name,
         role: user.role as any,
         status: user.status as any,
@@ -40,12 +42,16 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async update(id: number, data: Partial<User>): Promise<User> {
+    const updateData: any = { ...data };
+    if (data.password) {
+      updateData.password = await bcrypt.hash(data.password, 10);
+    }
     const record = await this.prisma.user.update({
       where: { id },
       data: {
         ...(data.phone && { phone: data.phone }),
         ...(data.name && { name: data.name }),
-        ...(data.password && { password: data.password }),
+        ...(updateData.password && { password: updateData.password }),
         ...(data.status && { status: data.status as any }),
       },
     });

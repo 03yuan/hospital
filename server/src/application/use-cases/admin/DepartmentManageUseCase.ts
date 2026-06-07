@@ -29,7 +29,7 @@ export class DepartmentManageUseCase {
   }
 
   async delete(id: number): Promise<void> {
-    await this.deptRepo.delete(id);
+    await this.deptRepo.softDelete(id);
   }
 
   async updateStatus(id: number, status: DeptStatus): Promise<DepartmentDto> {

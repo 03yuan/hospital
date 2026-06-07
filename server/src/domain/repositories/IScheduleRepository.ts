@@ -7,5 +7,5 @@ export interface IScheduleRepository {
   findByDoctorIdAndMonth(doctorId: number, year: number, month: number): Promise<Schedule[]>;
   create(schedule: Schedule): Promise<Schedule>;
   createMany(schedules: Schedule[]): Promise<Schedule[]>;
-  delete(id: number): Promise<void>;
+  softDelete(id: number): Promise<void>;
 }

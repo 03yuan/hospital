@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { IUserRepository } from '../../../domain/repositories/IUserRepository';
 import { UpdateProfileRequest, ProfileResponse } from '../../dtos/profile.dto';
 
@@ -10,7 +11,8 @@ export class UpdateProfileUseCase {
 
     if (req.newPassword) {
       if (!req.oldPassword) throw new Error('修改密码需提供原密码');
-      if (user.password !== req.oldPassword) throw new Error('原密码错误');
+      const valid = await bcrypt.compare(req.oldPassword, user.password);
+      if (!valid) throw new Error('原密码错误');
     }
 
     const updateData: any = {};

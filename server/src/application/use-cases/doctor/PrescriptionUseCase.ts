@@ -60,6 +60,6 @@ export class PrescriptionUseCase {
   }
 
   async deletePrescription(prescriptionId: number): Promise<void> {
-    await this.prescriptionRepo.delete(prescriptionId);
+    await this.prescriptionRepo.softDelete(prescriptionId);
   }
 }

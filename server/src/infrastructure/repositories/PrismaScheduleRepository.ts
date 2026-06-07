@@ -7,13 +7,13 @@ export class PrismaScheduleRepository implements IScheduleRepository {
 
   async findById(id: number): Promise<Schedule | null> {
     const record = await this.prisma.schedule.findUnique({ where: { id } });
-    if (!record) return null;
+    if (!record || record.deletedAt) return null;
     return new Schedule({ doctorId: record.doctorId, date: record.date, hour: record.hour }, record.id);
   }
 
   async findByDoctorId(doctorId: number): Promise<Schedule[]> {
     const records = await this.prisma.schedule.findMany({
-      where: { doctorId },
+      where: { doctorId, deletedAt: null },
       orderBy: [{ date: 'desc' }, { hour: 'asc' }],
     });
     return records.map((r) => new Schedule({ doctorId: r.doctorId, date: r.date, hour: r.hour }, r.id));
@@ -22,7 +22,7 @@ export class PrismaScheduleRepository implements IScheduleRepository {
   async findByDoctorIdAndDate(doctorId: number, date: Date): Promise<Schedule[]> {
     const dateStr = date.toISOString().split('T')[0];
     const records = await this.prisma.schedule.findMany({
-      where: { doctorId, date: new Date(dateStr) },
+      where: { doctorId, date: new Date(dateStr), deletedAt: null },
       orderBy: { hour: 'asc' },
     });
     return records.map((r) => new Schedule({ doctorId: r.doctorId, date: r.date, hour: r.hour }, r.id));
@@ -32,7 +32,7 @@ export class PrismaScheduleRepository implements IScheduleRepository {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
     const records = await this.prisma.schedule.findMany({
-      where: { doctorId, date: { gte: startDate, lte: endDate } },
+      where: { doctorId, date: { gte: startDate, lte: endDate }, deletedAt: null },
       orderBy: [{ date: 'asc' }, { hour: 'asc' }],
     });
     return records.map((r) => new Schedule({ doctorId: r.doctorId, date: r.date, hour: r.hour }, r.id));
@@ -51,13 +51,13 @@ export class PrismaScheduleRepository implements IScheduleRepository {
     const doctorId = schedules[0].doctorId;
     const dates = [...new Set(schedules.map((s) => s.date.toISOString().split('T')[0]))];
     const records = await this.prisma.schedule.findMany({
-      where: { doctorId, date: { in: dates.map((d) => new Date(d)) } },
+      where: { doctorId, date: { in: dates.map((d) => new Date(d)) }, deletedAt: null },
       orderBy: [{ date: 'asc' }, { hour: 'asc' }],
     });
     return records.map((r) => new Schedule({ doctorId: r.doctorId, date: r.date, hour: r.hour }, r.id));
   }
 
-  async delete(id: number): Promise<void> {
-    await this.prisma.schedule.delete({ where: { id } });
+  async softDelete(id: number): Promise<void> {
+    await this.prisma.schedule.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 }

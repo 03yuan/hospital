@@ -1,14 +1,16 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
+  const adminPassword = await bcrypt.hash('admin123', 10);
   const admin = await prisma.user.upsert({
     where: { phone: '13800000000' },
-    update: {},
+    update: { password: adminPassword },
     create: {
       phone: '13800000000',
-      password: 'admin123',
+      password: adminPassword,
       name: '系统管理员',
       role: 'ADMIN',
       status: 'ACTIVE',
@@ -36,6 +38,7 @@ async function main() {
   }
   console.log(`已创建 ${depts.length} 个科室`);
 
+  const doctorPassword = await bcrypt.hash('123456', 10);
   const doctorUsers = [
     { phone: '13900000001', name: '李文', title: '主任医师', deptId: 1 },
     { phone: '13900000002', name: '王芳', title: '副主任医师', deptId: 1 },
@@ -47,10 +50,10 @@ async function main() {
   for (const doc of doctorUsers) {
     const user = await prisma.user.upsert({
       where: { phone: doc.phone },
-      update: {},
+      update: { password: doctorPassword },
       create: {
         phone: doc.phone,
-        password: '123456',
+        password: doctorPassword,
         name: doc.name,
         role: 'DOCTOR',
         status: 'ACTIVE',
@@ -59,7 +62,7 @@ async function main() {
 
     await prisma.doctor.upsert({
       where: { id: doctorUsers.indexOf(doc) + 1 },
-      update: {},
+      update: { title: doc.title, description: `${doc.name}，${doc.title}，擅长相关疾病诊疗。` },
       create: {
         id: doctorUsers.indexOf(doc) + 1,
         userId: user.id,
@@ -72,18 +75,19 @@ async function main() {
   console.log(`已创建 ${doctorUsers.length} 名医生`);
 
   // 创建示例患者
+  const patientPassword = await bcrypt.hash('123456', 10);
   const patients = [
-    { phone: '13700000001', name: '赵明', password: '123456' },
-    { phone: '13700000002', name: '孙丽', password: '123456' },
-    { phone: '13700000003', name: '周伟', password: '123456' },
-    { phone: '13700000004', name: '吴婷', password: '123456' },
-    { phone: '13700000005', name: '郑刚', password: '123456' },
+    { phone: '13700000001', name: '赵明' },
+    { phone: '13700000002', name: '孙丽' },
+    { phone: '13700000003', name: '周伟' },
+    { phone: '13700000004', name: '吴婷' },
+    { phone: '13700000005', name: '郑刚' },
   ];
   for (const p of patients) {
     await prisma.user.upsert({
       where: { phone: p.phone },
-      update: {},
-      create: { phone: p.phone, password: p.password, name: p.name, role: 'PATIENT', status: 'ACTIVE' },
+      update: { password: patientPassword },
+      create: { phone: p.phone, password: patientPassword, name: p.name, role: 'PATIENT', status: 'ACTIVE' },
     });
   }
   console.log(`已创建 ${patients.length} 名示例患者`);

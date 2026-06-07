@@ -16,10 +16,15 @@
 | HTTP 客户端 | Axios | 请求/拦截器统一管理 |
 | 路由 | React Router v6 | 声明式路由，支持嵌套布局 |
 | 后端框架 | Node.js + Express + TypeScript | 轻量、灵活 |
+| 运行时 | Node.js >= 18 | 项目未锁定版本，推荐 >=18 |
 | ORM | Prisma | 类型安全、自动迁移、查询构建器 |
 | 数据库 | MySQL 8 | 关系型数据库，广泛使用 |
 | 认证 | JWT (jsonwebtoken) | 无状态 token |
-| API 文档 | Swagger / OpenAPI 3.0 | 接口可视化与协作 |
+| 密码加密 | bcryptjs | 用户密码哈希存储 |
+| 文件上传 | multer | 图片上传，限制 5MB，仅允许 image/* |
+| CORS | cors | 跨域白名单配置 |
+| 测试框架 | Vitest + Supertest | 单元测试 + API 集成测试 |
+| API 文档 | 无（接口定义见本文档） | 当前暂不提供可视化文档 |
 
 ---
 
@@ -31,11 +36,26 @@ hospital/
 │   ├── spec.md                  # 需求规格
 │   └── plan.md                  # 本文件
 ├── server/                      # 后端
+│   ├── tests/                   # 测试文件（Vitest + Supertest）
 │   ├── prisma/
 │   │   └── schema.prisma        # 数据库模型定义
 │   ├── src/
 │   │   ├── index.ts             # 入口：启动服务器
 │   │   ├── app.ts               # Express 应用配置（中间件、路由挂载）
+│   │   ├── container.ts         # 依赖注入容器（工厂函数模式）
+│   │   ├── domain/              # 领域层
+│   │   │   ├── entities/        #   领域实体
+│   │   │   ├── enums/           #   枚举
+│   │   │   ├── repositories/    #   仓储接口
+│   │   │   └── services/        #   领域服务
+│   │   ├── application/         # 应用层
+│   │   │   ├── dtos/            #   请求/响应 DTO
+│   │   │   ├── services/        #   应用服务（如 NotificationService）
+│   │   │   └── use-cases/       #   业务用例（按角色分组）
+│   │   ├── infrastructure/      # 基础设施层
+│   │   │   ├── auth/            #   (空)
+│   │   │   ├── database/        #   Prisma 客户端单例
+│   │   │   └── repositories/    #   Prisma 仓储实现
 │   │   ├── config/
 │   │   │   └── index.ts         # 环境变量与配置
 │   │   ├── middleware/
@@ -49,6 +69,10 @@ hospital/
 │   │   │   ├── doctors.ts       # 医生路由（患者端）
 │   │   │   ├── schedules.ts     # 排班查询路由（患者端）
 │   │   │   ├── appointments.ts  # 预约路由（患者端）
+│   │   │   ├── examinations.ts  # 检查检验路由
+│   │   │   ├── notifications.ts # 通知路由
+│   │   │   ├── medicines.ts     # 药品查询路由
+│   │   │   ├── upload.ts        # 文件上传
 │   │   │   ├── doctor/
 │   │   │   │   ├── appointments.ts  # 医生端预约管理
 │   │   │   │   ├── profile.ts      # 医生个人资料编辑
@@ -56,12 +80,10 @@ hospital/
 │   │   │   └── admin/
 │   │   │       ├── departments.ts   # 管理员：科室管理
 │   │   │       ├── doctors.ts       # 管理员：医生管理
+│   │   │       ├── patients.ts      # 管理员：患者列表
 │   │   │       ├── schedules.ts     # 管理员：排班管理
 │   │   │       └── statistics.ts    # 管理员：数据统计
-│   │   ├── controllers/         # 各路由对应的控制器函数
-│   │   ├── services/            # 业务逻辑层
-│   │   ├── validators/          # 请求参数校验（zod 或 express-validator）
-│   │   ├── types/               # TypeScript 类型定义
+│   │   ├── validators/          # 请求参数校验
 │   │   └── utils/
 │   │       └── jwt.ts           # JWT 工具函数
 │   ├── package.json
@@ -75,9 +97,14 @@ hospital/
 │   │   │   ├── auth.ts          # 认证相关 API
 │   │   │   ├── departments.ts   # 科室 API
 │   │   │   ├── doctors.ts       # 医生 API
+│   │   │   ├── doctor.ts        # 医生端诊断/处方 API
 │   │   │   ├── schedules.ts     # 排班 API
 │   │   │   ├── appointments.ts  # 预约 API
-│   │   │   └── admin.ts         # 管理后台 API
+│   │   │   ├── admin.ts         # 管理后台 API
+│   │   │   ├── profile.ts       # 个人资料 API
+│   │   │   ├── medicines.ts     # 药品 API
+│   │   │   ├── examinations.ts  # 检查检验 API
+│   │   │   ├── notifications.ts # 通知 API
 │   │   ├── store/
 │   │   │   └── authStore.ts     # 认证状态（Zustand）
 │   │   ├── hooks/               # 自定义 hooks
@@ -97,17 +124,11 @@ hospital/
 │   │   │   │   ├── DashboardPage.tsx
 │   │   │   │   ├── AppointmentListPage.tsx
 │   │   │   │   ├── ProfilePage.tsx          # 医生编辑个人资料
-│   │   │   │   ├── PatientHistoryPage.tsx   # 查看患者就诊历史
-│   │   │   │   ├── ExaminationPage.tsx      # 开检查单
-│   │   │   │   ├── WardManagePage.tsx       # 住院管理
-│   │   │   │   └── AdmissionDetailPage.tsx  # 住院患者详情
+│   │   │   │   └── PatientHistoryPage.tsx   # 查看患者就诊历史
 │   │   │   └── admin/
 │   │   │       ├── DepartmentManagePage.tsx
 │   │   │       ├── DoctorManagePage.tsx
 │   │   │       ├── ScheduleManagePage.tsx
-│   │   │       ├── ExaminationItemManagePage.tsx  # 检查项目管理
-│   │   │       ├── WardManagePage.tsx             # 病房床位管理
-│   │   │       ├── AdmissionManagePage.tsx        # 入院审批出院结算
 │   │   │       └── StatisticsPage.tsx
 │   │   ├── components/
 │   │   │   ├── layout/
@@ -115,8 +136,7 @@ hospital/
 │   │   │   │   ├── DoctorLayout.tsx
 │   │   │   │   └── AdminLayout.tsx
 │   │   │   ├── notification/
-│   │   │   │   ├── NotificationBell.tsx    # 通知铃铛图标 + 未读小红点
-│   │   │   │   └── NotificationList.tsx    # 通知列表弹窗
+│   │   │   │   └── NotificationBell.tsx    # 通知铃铛图标 + 未读小红点 + 下拉列表
 │   │   │   ├── common/
 │   │   │   │   ├── ProtectedRoute.tsx
 │   │   │   │   └── RoleGuard.tsx
@@ -126,6 +146,7 @@ hospital/
 │   │   ├── router/
 │   │   │   └── index.tsx        # 路由表配置
 │   │   ├── types/               # TypeScript 类型定义
+│   │   ├── theme.ts             # 主题配置（white/black 模式）
 │   │   └── utils/
 │   │       ├── constants.ts
 │   │       └── format.ts        # 日期/状态格式化工具
@@ -139,6 +160,18 @@ hospital/
 
 ---
 
+### 2.1 环境变量
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `DATABASE_URL` | MySQL 连接串 | `mysql://root:password@localhost:3306/hospital` |
+| `JWT_SECRET` | JWT 签名密钥 | （必填，无默认值） |
+| `PORT` | 服务监听端口 | `3001` |
+
+所有环境变量在 `server/.env` 中配置，`server/.env.example` 为模板。
+
+---
+
 ## 3. 数据库设计
 
 ### 3.1 ER 图（文本描述）
@@ -146,7 +179,7 @@ hospital/
 ```
 User 1──N Appointment N──1 Doctor N──1 Department
 User 1──N ExaminationOrder
-User 1──N Admission
+User 1──N Notification
 
 Schedule 1──N Appointment
 
@@ -154,11 +187,8 @@ ExaminationItem N──1 Department
 ExaminationOrder 1──N ExaminationOrderItem N──1 ExaminationItem
 ExaminationOrder 1──N ExaminationReport
 
-Ward N──1 Department
-Ward 1──N Bed 1──1 Admission
-Admission 1──N MedicalOrder
-Admission 1──N MedicalRecord
-Admission 1──N DailyChart
+Appointment 1──N Prescription
+Appointment 1──N ExaminationOrder
 ```
 
 ### 3.2 数据表定义（Prisma Schema）
@@ -210,6 +240,7 @@ model User {
 
   doctor    Doctor?
   appointments Appointment[] @relation("PatientAppointments")
+  notifications Notification[]
 }
 
 model Doctor {
@@ -233,11 +264,13 @@ model Department {
   name        String
   description String?    @default("")
   status      DeptStatus @default(ACTIVE)
+  deletedAt   DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
   doctors   Doctor[]
   appointments Appointment[]
+  examinationItems ExaminationItem[]
 }
 
 model Schedule {
@@ -245,10 +278,12 @@ model Schedule {
   doctorId  Int
   date      DateTime @db.Date     // 仅日期部分（如 2026-05-25）
   hour      Int                   // 0-23，表示时段的起始小时
+  deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  doctor Doctor @relation(fields: [doctorId], references: [id])
+  doctor      Doctor        @relation(fields: [doctorId], references: [id])
+  appointments Appointment[]
 
   @@unique([doctorId, date, hour])  // 同一医生同一日同一时段不重复
   @@index([doctorId, date])
@@ -273,6 +308,7 @@ model Appointment {
   department   Department    @relation(fields: [departmentId], references: [id])
   schedule     Schedule      @relation(fields: [scheduleId], references: [id])
   prescriptions Prescription[]
+  examinationOrders ExaminationOrder[]
 
   @@index([patientId, status])
   @@index([doctorId, date])
@@ -286,6 +322,7 @@ model Prescription {
   dosage        String   // 用量，如"每次1片"
   method        String   // 用法，如"每日3次"
   days          Int      // 天数
+  deletedAt     DateTime?
   createdAt     DateTime @default(now())
 
   appointment Appointment @relation(fields: [appointmentId], references: [id])
@@ -353,94 +390,6 @@ model ExaminationReport {
   createdAt DateTime @default(now())
 
   order     ExaminationOrder @relation(fields: [orderId], references: [id])
-}
-
-model Ward {
-  id           Int      @id @default(autoincrement())
-  name         String   // 病房名，如"内科一病区"
-  departmentId Int
-  description  String?
-  createdAt    DateTime @default(now())
-
-  department   Department @relation(fields: [departmentId], references: [id])
-  beds         Bed[]
-
-  @@index([departmentId])
-}
-
-model Bed {
-  id       Int    @id @default(autoincrement())
-  wardId   Int
-  bedNumber String // 床位号，如"101-1"
-  status   String @default("AVAILABLE") // AVAILABLE / OCCUPIED
-
-  ward     Ward   @relation(fields: [wardId], references: [id])
-  admission Admissions?
-
-  @@unique([wardId, bedNumber])
-}
-
-model Admission {
-  id            Int      @id @default(autoincrement())
-  patientId     Int
-  doctorId      Int
-  bedId         Int      @unique
-  diagnosis     String   // 入院诊断
-  status        String   @default("ADMITTED") // ADMITTED / DISCHARGED
-  admittedAt    DateTime @default(now())
-  dischargedAt  DateTime?
-
-  patient       User     @relation(fields: [patientId], references: [id])
-  doctor        Doctor   @relation(fields: [doctorId], references: [id])
-  bed           Bed      @relation(fields: [bedId], references: [id])
-  orders        MedicalOrder[]
-  records       MedicalRecord[]
-  dailyCharts   DailyChart[]
-
-  @@index([patientId])
-  @@index([status])
-}
-
-model MedicalOrder {
-  id          Int      @id @default(autoincrement())
-  admissionId Int
-  type        String   // LONG_TERM / TEMPORARY
-  content     String   // 医嘱内容
-  status      String   @default("ACTIVE") // ACTIVE / STOPPED
-  createdAt   DateTime @default(now())
-  stoppedAt   DateTime?
-
-  admission   Admission @relation(fields: [admissionId], references: [id])
-
-  @@index([admissionId])
-}
-
-model MedicalRecord {
-  id          Int      @id @default(autoincrement())
-  admissionId Int
-  content     String   // 病程记录内容
-  recordDate  DateTime @db.Date
-  createdAt   DateTime @default(now())
-
-  admission   Admission @relation(fields: [admissionId], references: [id])
-
-  @@index([admissionId])
-  @@index([recordDate])
-}
-
-model DailyChart {
-  id          Int      @id @default(autoincrement())
-  admissionId Int
-  recordDate  DateTime @db.Date
-  temperature Decimal? @db.Decimal(4,1) // 体温
-  pulse       Int?     // 脉搏
-  breath      Int?     // 呼吸
-  bloodPressure String? // 血压，如"120/80"
-  createdAt   DateTime @default(now())
-
-  admission   Admission @relation(fields: [admissionId], references: [id])
-
-  @@unique([admissionId, recordDate])
 }
 
 model MedicineCategory {
@@ -600,6 +549,7 @@ model Notification {
 - `UpdateAppointmentStatusUseCase` (VISITED) → 通知患者（就诊完成）
 - `UpdateDiagnosisUseCase` → 通知患者（诊断已更新）
 - `AddPrescriptionUseCase` → 通知患者（处方已开）
+- `ExaminationUseCase` (创建检查单) → 通知患者（检查已开具）
 
 #### 医生端（需 DOCTOR 角色）
 
@@ -690,23 +640,11 @@ model Notification {
 | PATCH| `/api/examination-orders/:id/status` | 更新检查单状态 | 3.13 |
 | POST | `/api/examination-orders/:id/report` | 录入检查报告（含图片） | 3.13 |
 
-#### 住院管理（需认证）
+#### 文件上传（需认证）
 
-| 方法 | 路径 | 说明 | spec 追踪 |
-|------|------|------|-----------|
-| GET  | `/api/wards?departmentId=` | 获取病房列表 | 3.14 |
-| POST | `/api/wards` | 新增病房（管理员） | 3.14 |
-| GET  | `/api/beds?wardId=` | 获取床位列表 | 3.14 |
-| POST | `/api/beds` | 新增床位（管理员） | 3.14 |
-| POST | `/api/admissions` | 入院申请 | 3.14 |
-| GET  | `/api/admissions?status=` | 查询住院记录 | 3.14 |
-| PATCH| `/api/admissions/:id/discharge` | 出院结算 | 3.14 |
-| POST | `/api/admissions/:id/orders` | 添加医嘱 | 3.14 |
-| GET  | `/api/admissions/:id/orders` | 查看医嘱列表 | 3.14 |
-| POST | `/api/admissions/:id/records` | 添加病程记录 | 3.14 |
-| GET  | `/api/admissions/:id/records` | 查看病程记录 | 3.14 |
-| POST | `/api/admissions/:id/daily-chart` | 添加每日体征 | 3.14 |
-| GET  | `/api/admissions/:id/daily-chart` | 查看每日体征 | 3.14 |
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/upload` | 上传图片（头像等），限制 5MB，仅 image/* 类型 |
 
 #### 管理员端（需 ADMIN 角色）
 
@@ -728,6 +666,7 @@ model Notification {
 | GET  | `/api/admin/statistics/appointments?start=&end=` | 预约量统计 | 3.9 |
 | GET  | `/api/admin/statistics/departments?start=&end=` | 科室预约统计 | 3.9 |
 | GET  | `/api/admin/statistics/cancellation-rate?start=&end=` | 取消率统计 | 3.9 |
+| GET  | `/api/admin/patients` | 获取患者列表（管理员/医生） | 3.5 |
 
 ---
 
@@ -752,17 +691,11 @@ model Notification {
   /doctor/appointments        → AppointmentListPage   （按日期查看）
   /doctor/profile             → ProfilePage           （编辑个人资料）
   /doctor/patients/:id/history → PatientHistoryPage   （患者就诊历史）
-  /doctor/examination         → ExaminationPage       （开检查单）
-  /doctor/wards               → WardManagePage        （住院患者列表）
-  /doctor/wards/:id           → AdmissionDetailPage   （住院患者详情）
 
 /admin                        → AdminLayout
   /admin/departments          → DepartmentManagePage  （科室管理）
   /admin/doctors              → DoctorManagePage      （医生管理）
   /admin/schedules            → ScheduleManagePage    （排班管理）
-  /admin/examination-items    → ExaminationItemManagePage  （检查项目管理）
-  /admin/wards                → WardManagePage        （病房床位管理）
-  /admin/admissions           → AdmissionManagePage   （入院出院管理）
   /admin/statistics           → StatisticsPage        （数据统计）
 ```
 
@@ -785,7 +718,7 @@ model Notification {
 | DepartmentManagePage | Table + Modal Form | GET/POST/PUT /admin/departments |
 | DoctorManagePage | Table + Modal Form | GET/POST/PUT /admin/doctors |
 | ScheduleManagePage | Calendar 视图 + 批量设置面板 + 近期/历史 Tab 分表 | CRUD /admin/schedules |
-| StatisticsPage | 统计图表（Chart 库） | GET /admin/statistics/* |
+| StatisticsPage | 统计图表（Ant Design Statistic） | GET /admin/statistics/* |
 
 ### 5.3 核心状态（Zustand Store）
 
@@ -827,6 +760,11 @@ roleGuard(...roles: Role[]) => (req, res, next) => {
   next();
 }
 ```
+
+**全局错误处理（errorHandler）：**
+在所有路由之后注册，捕获未被处理的异常（含 `AppError` 自定义错误），统一返回 `{ code, data: null, message }` 格式。
+- 使用 `createError(statusCode, code, message)` 在路由中抛错
+- 未捕获异常默认返回 `50001`（服务器内部错误）
 
 ---
 
@@ -960,7 +898,7 @@ function batchCreateSchedules(doctorId, dateRange, hourRanges[]) {
 
 | 层级 | 工具 | 覆盖范围 |
 |------|------|----------|
-| 单元测试（后端） | Vitest / Jest | Service 层核心业务逻辑：创建预约、取消预约、校验规则 |
+| 单元测试（后端） | Vitest | Service 层核心业务逻辑：创建预约、取消预约、校验规则 |
 | 集成测试（后端） | Supertest | API 端点：认证流程、CRUD 操作、权限验证 |
 | 单元测试（前端） | Vitest + React Testing Library | 组件渲染、状态展示、交互回调 |
 | E2E 测试 | Playwright | 核心用户流程：注册→登录→选科室→选医生→预约→查看→取消 |
@@ -1015,11 +953,8 @@ describe('cancelAppointment', () => {
 | **Phase 11：药品数据库** | 后端：MedicineCategory + Medicine 表、种子数据、药品查询 API | 医生开药可按分类选择 |
 | | 前端：DashboardPage 处方面板改用按分类选择的 Select 组件 | |
 | **Phase 12：检查检验模块** | 后端：ExaminationItem/Order/Report 表、检查开单/报告 API | 可开检查单、录报告、查看结果 |
-| | 前端：医生开单页、检查报告查看页、项目管理页 | |
-| **Phase 13：住院管理** | 后端：Ward/Bed/Admission/MedicalOrder/MedicalRecord/DailyChart 表、住院全流程 API | 住院全流程管理 |
-| | 前端：病房床位管理、入院出院、医嘱病程体温单 | |
-| **Phase 14：电子病历** | 后端：病历汇总查询 API，整合就诊/检查/住院数据 | 患者完整病历档案 |
-| | 前端：病历时间线页面 | |
+| | 前端：检查报告查看页（患者端） | |
+
 
 ---
 
@@ -1032,7 +967,7 @@ describe('cancelAppointment', () => {
 | 不限号 | 不做号源扣减校验 | spec 4 明确 "不限号" |
 | 同天同科室限一个预约 | Service 层校验 | 业务合理性：避免患者同一科室重复挂号 |
 | 数据库选用 MySQL | MySQL 8 | 用户明确指定 |
-| 密码存储 | 明文存储 | 用户明确指定，不进行 bcrypt 等加密 |
+| 密码存储 | bcrypt 加密 | 使用 bcrypt.hash() 加密存储，兼容明文自动升级 |
 | 前后端分离 | 独立 server/ 和 client/ | 职责清晰，独立部署和扩展 |
 | 病情描述选填 | Appointment.symptom 可为空 | 尊重用户习惯，不强制填病状 |
 | 诊断与处方分离 | 诊断存 Appointment.diagnosis，处方独立 Prescription 表 | 一对多关系，支持多个药品 |
@@ -1041,6 +976,9 @@ describe('cancelAppointment', () => {
 | 出诊日历月视图 | BookingPage 使用 Calendar 组件高亮排班日期 | 提升患者选日体验，一目了然 |
 | 医生照片存 URL | Doctor.photo 存图片 URL，前端用 img 标签展示 | 文件上传暂用 URL 输入或 base64，后续可接对象存储 |
 | 密码修改需验原密码 | oldPassword + newPassword 双字段 | 安全考虑，防止未授权修改 |
+| 主题模式 | 前端提供 white/black 主题切换（theme.ts） | 满足不同用户视觉偏好，提升使用体验 |
+| 软删除策略 | Department/Schedule/Prescription 使用 deletedAt 标记删除 | 保留历史数据完整性，避免级联影响已有预约/处方记录 |
+| CORS 白名单 | 后端 config 中配置 allowedOrigins | 生产环境限制跨域来源，提高 API 安全性 |
 
 ---
 
@@ -1234,63 +1172,6 @@ interface ExaminationReport {
   content?: string;
   images?: string;
   createdAt: string;
-}
-
-interface Ward {
-  id: number;
-  name: string;
-  departmentId: number;
-  departmentName: string;
-  description?: string;
-}
-
-interface Bed {
-  id: number;
-  wardId: number;
-  bedNumber: string;
-  status: string;
-}
-
-interface Admission {
-  id: number;
-  patientId: number;
-  patientName: string;
-  doctorId: number;
-  doctorName: string;
-  bedId: number;
-  wardName: string;
-  bedNumber: string;
-  diagnosis: string;
-  status: string;
-  admittedAt: string;
-  dischargedAt?: string;
-}
-
-interface MedicalOrder {
-  id: number;
-  admissionId: number;
-  type: string;
-  content: string;
-  status: string;
-  createdAt: string;
-}
-
-interface MedicalRecord {
-  id: number;
-  admissionId: number;
-  content: string;
-  recordDate: string;
-  createdAt: string;
-}
-
-interface DailyChart {
-  id: number;
-  admissionId: number;
-  recordDate: string;
-  temperature?: number;
-  pulse?: number;
-  breath?: number;
-  bloodPressure?: string;
 }
 
 interface NotificationListResponse {

@@ -33,9 +33,11 @@ import { examinationRouter } from './routes/examinations';
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',');
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use(express.static(path.join(__dirname, '../../client')));
 
 app.get('/api/health', (_req, res) => {
   res.json({ code: 0, data: { status: 'ok' }, message: 'ok' });
@@ -74,6 +76,11 @@ function initRoutes() {
 }
 
 initRoutes();
+
+// SPA fallback  — 非 API 请求返回 index.html，支持前端路由刷新
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../../client/index.html'));
+});
 
 app.use(errorHandler);
 

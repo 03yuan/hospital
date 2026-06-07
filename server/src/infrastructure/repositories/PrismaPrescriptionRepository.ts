@@ -7,7 +7,7 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
 
   async findByAppointmentId(appointmentId: number): Promise<Prescription[]> {
     const records = await this.prisma.prescription.findMany({
-      where: { appointmentId },
+      where: { appointmentId, deletedAt: null },
       orderBy: { createdAt: 'asc' },
     });
     return records.map((r) => new Prescription({
@@ -40,7 +40,7 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
     });
   }
 
-  async delete(id: number): Promise<void> {
-    await this.prisma.prescription.delete({ where: { id } });
+  async softDelete(id: number): Promise<void> {
+    await this.prisma.prescription.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 }

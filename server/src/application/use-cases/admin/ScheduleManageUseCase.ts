@@ -42,7 +42,7 @@ export class ScheduleManageUseCase {
   }
 
   async delete(id: number): Promise<void> {
-    await this.scheduleRepo.delete(id);
+    await this.scheduleRepo.softDelete(id);
   }
 
   async batchCreate(req: BatchScheduleRequest): Promise<ScheduleResponse[]> {

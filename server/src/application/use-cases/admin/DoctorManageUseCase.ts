@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { IDoctorRepository } from '../../../domain/repositories/IDoctorRepository';
 import { IUserRepository } from '../../../domain/repositories/IUserRepository';
 import { IDepartmentRepository } from '../../../domain/repositories/IDepartmentRepository';
@@ -36,9 +37,11 @@ export class DoctorManageUseCase {
   }
 
   async create(dto: DoctorManageDto): Promise<DoctorManageDto> {
+    const rawPassword = dto.password || '123456';
+    const hashedPassword = await bcrypt.hash(rawPassword, 10);
     const user = new User({
       phone: dto.phone,
-      password: dto.password || '123456',
+      password: hashedPassword,
       name: dto.name,
       role: Role.DOCTOR,
     });

@@ -66,6 +66,7 @@ model Department {
   name        String
   description String?    @default("")
   status      DeptStatus @default(ACTIVE)
+  deletedAt   DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -79,6 +80,7 @@ model Schedule {
   doctorId  Int
   date      DateTime @db.Date
   hour      Int
+  deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -122,6 +124,7 @@ model Prescription {
   dosage        String
   method        String
   days          Int
+  deletedAt     DateTime?
   createdAt     DateTime @default(now())
 
   appointment Appointment @relation(fields: [appointmentId], references: [id])
